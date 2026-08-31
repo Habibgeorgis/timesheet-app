@@ -73,7 +73,8 @@ export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart }: { curren
               {days.map((day) => {
                 const dayMonday = mondayOf(day);
                 const unavailable = isAfter(dayMonday, latestPreviousMonday);
-                const selected = !isBefore(day, selectedMonday) && !isAfter(day, selectedFriday);
+                const weekday = day.getDay();
+                const selected = dateKey(dayMonday) === dateKey(selectedMonday) && weekday >= 1 && weekday <= 5;
                 return (
                   <button
                     type="button"

@@ -39,14 +39,14 @@ function EmployeeCard({employee,archived=false}:{employee:EmployeeProfile;archiv
   const entries=employee.timesheets.flatMap(timesheet=>timesheet.entries);
   const total=entries.reduce((sum,entry)=>sum+entry.minutes,0);
   const weeks=employee.timesheets.filter(timesheet=>timesheet.entries.length).length;
-  return <article className={`panel flex h-[252px] w-full flex-col p-4 ${archived?"bg-[#fafbfa]":""}`}>
-    <Link href={`/manager/employees/${employee.id}`} className="group min-h-0 flex-1">
+  return <article className={`panel flex min-h-[260px] w-full flex-col p-4 ${archived?"bg-[#fafbfa]":""}`}>
+    <Link href={`/manager/employees/${employee.id}`} className="group flex-1">
       <div className="flex items-start justify-between gap-3"><span className={`grid size-10 place-items-center rounded-full text-xs font-bold ${archived?"bg-[#e4e9e7] text-[#56635f]":"bg-[#d8efe9] text-[#075f51]"}`}>{initials(employee.name)}</span><ChevronRight className="text-[#87938f] transition-transform group-hover:translate-x-1" size={19}/></div>
       <h3 className="mt-3 truncate text-base font-bold">{employee.name}</h3>
       <p className="mt-1 flex items-center gap-2 truncate text-xs text-[#66736f]"><Mail className="shrink-0" size={14}/>{employee.email}</p>
       <div className="mt-4 grid grid-cols-2 gap-3 border-y border-[#e5eae8] py-3"><div><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#66736f]"><Clock3 size={13}/>Total hours</div><div className="mt-1 text-sm font-bold">{formatDuration(total)}</div></div><div><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#66736f]"><CalendarDays size={13}/>Weeks</div><div className="mt-1 text-sm font-bold">{weeks}</div></div></div>
     </Link>
-    <div className={`mt-3 ${archived?"grid grid-cols-[.8fr_1.2fr] gap-2":""}`}>{archived?<><RestoreEmployeeButton employeeId={employee.id} name={employee.name}/><DeleteEmployeeButton employeeId={employee.id} name={employee.name}/></>:<RemoveEmployeeButton employeeId={employee.id} name={employee.name}/>}</div>
+    <div className={`mt-4 border-t border-[#e5eae8] pt-3 ${archived?"grid grid-cols-2 gap-2":""}`}>{archived?<><RestoreEmployeeButton employeeId={employee.id} name={employee.name}/><DeleteEmployeeButton employeeId={employee.id} name={employee.name}/></>:<RemoveEmployeeButton employeeId={employee.id} name={employee.name}/>}</div>
   </article>;
 }
 
