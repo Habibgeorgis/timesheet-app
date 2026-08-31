@@ -1,4 +1,4 @@
-# Tempo Timesheets
+# Time Track
 
 Production-oriented employee time tracking with weekly timesheets, manager approvals, audit history, charts, and PDF reports.
 
