@@ -59,6 +59,6 @@ npm run db:studio    # inspect data with Prisma Studio
 
 ## Production notes
 
-Use a managed PostgreSQL database, a unique database role, TLS, and platform-managed secrets. Set `DATABASE_URL`, `APP_URL`, and `SESSION_COOKIE_NAME`; run `prisma migrate deploy` as a release step. The session cookie automatically becomes `Secure` in production. Put the application behind HTTPS and add scheduled cleanup for expired `Session` records.
+Use a managed PostgreSQL database, a unique database role, TLS, and platform-managed secrets. Set `DATABASE_URL`, `APP_URL`, and `SESSION_COOKIE_NAME`; run `prisma migrate deploy` as a release step. The session cookie automatically becomes `Secure` in production. Production seeding requires a strong `SEED_PASSWORD`; the development fallback is never shown in production. Put the application behind HTTPS and add scheduled cleanup for expired `Session` records.
 
 The `/api/health` endpoint verifies database connectivity. `/api/timesheets` exposes the signed-in employee's records, and `/api/reports/timesheets/:id` enforces owner/manager access before returning a PDF.

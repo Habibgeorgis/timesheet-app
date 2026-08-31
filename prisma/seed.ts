@@ -5,7 +5,11 @@ import { addDays, startOfWeek, subWeeks } from "date-fns";
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash("Timesheet123!", 12);
+  const seedPassword = process.env.SEED_PASSWORD ?? "Timesheet123!";
+  if (process.env.NODE_ENV === "production" && !process.env.SEED_PASSWORD) {
+    throw new Error("SEED_PASSWORD is required when seeding production.");
+  }
+  const passwordHash = await bcrypt.hash(seedPassword, 12);
 
   const [manager, employee, employeeTwo] = await Promise.all([
     prisma.user.upsert({
@@ -74,7 +78,7 @@ async function main() {
     },
   });
 
-  console.log("Seeded manager@acme.test and employee@acme.test (password: Timesheet123!)");
+  console.log("Seeded manager@acme.test and employee@acme.test");
 }
 
 main().finally(() => prisma.$disconnect());
