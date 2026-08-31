@@ -14,7 +14,7 @@ export async function saveEntry(_: ActionState, formData: FormData): Promise<Act
   const user = await requireUser();
   const result = entrySchema.safeParse(Object.fromEntries(formData));
   if (!result.success) return { error: result.error.issues[0]?.message ?? "Invalid entry." };
-  const { timesheetId, entryId, projectId, date, hours, description, billable } = result.data;
+  const { timesheetId, entryId, date, hours } = result.data;
   const timesheet = await prisma.timesheet.findFirst({ where: { id: timesheetId, userId: user.id } });
   if (!timesheet) return { error: "Timesheet not found." };
   if (timesheet.status !== TimesheetStatus.DRAFT && timesheet.status !== TimesheetStatus.REJECTED) return { error: "This timesheet is locked." };
@@ -28,12 +28,17 @@ export async function saveEntry(_: ActionState, formData: FormData): Promise<Act
   if ((existingDayMinutes._sum.minutes ?? 0) + minutes > 1440) return { error: "A day cannot contain more than 24 hours." };
 
   await prisma.$transaction(async (tx) => {
+    const generalProject = await tx.project.upsert({
+      where: { code: "GENERAL" },
+      update: { active: true },
+      create: { code: "GENERAL", name: "General time", color: "#087F6B" },
+    });
     if (entryId) {
       const existing = await tx.timeEntry.findFirst({ where: { id: entryId, timesheetId } });
       if (!existing) throw new Error("Entry not found");
-      await tx.timeEntry.update({ where: { id: entryId }, data: { projectId, date: entryDate, minutes, description, billable } });
+      await tx.timeEntry.update({ where: { id: entryId }, data: { projectId: generalProject.id, date: entryDate, minutes, description: null, billable: true } });
     } else {
-      await tx.timeEntry.create({ data: { timesheetId, projectId, date: entryDate, minutes, description, billable } });
+      await tx.timeEntry.create({ data: { timesheetId, projectId: generalProject.id, date: entryDate, minutes, billable: true } });
     }
     await tx.auditEvent.create({ data: { timesheetId, actorId: user.id, action: entryId ? AuditAction.UPDATED : AuditAction.CREATED, details: `${entryId ? "Updated" : "Added"} ${minutes} minutes` } });
     if (timesheet.status === TimesheetStatus.REJECTED) await tx.timesheet.update({ where: { id: timesheetId }, data: { status: TimesheetStatus.DRAFT } });

@@ -24,11 +24,8 @@ export const signupSchema = z.object({
 export const entrySchema = z.object({
   timesheetId: z.string().min(1),
   entryId: z.string().optional(),
-  projectId: z.string().min(1, "Select a project"),
   date: z.iso.date(),
   hours: z.coerce.number().min(0.25).max(24),
-  description: z.string().trim().max(500).optional(),
-  billable: z.coerce.boolean().default(false),
 });
 
 export const reviewSchema = z.object({
