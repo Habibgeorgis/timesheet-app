@@ -43,9 +43,8 @@ export async function addEmployee(_:EmployeeFormState,formData:FormData):Promise
   return {success:existing?"Employee restored.":"Employee added."};
 }
 
-export async function deactivateEmployee(formData:FormData){
+export async function deactivateEmployee(employeeId:string){
   await requireRole([Role.MANAGER,Role.ADMIN]);
-  const employeeId=String(formData.get("employeeId")??"");
   const employee=await prisma.user.findFirst({where:{id:employeeId,role:Role.EMPLOYEE,active:true}});
   if(!employee)return;
   await prisma.$transaction([
@@ -55,12 +54,24 @@ export async function deactivateEmployee(formData:FormData){
   revalidatePath("/manager");
 }
 
-export async function restoreEmployee(formData:FormData){
+export async function restoreEmployee(employeeId:string){
   await requireRole([Role.MANAGER,Role.ADMIN]);
-  const employeeId=String(formData.get("employeeId")??"");
   const employee=await prisma.user.findFirst({where:{id:employeeId,role:Role.EMPLOYEE,active:false}});
   if(!employee)return;
   await prisma.user.update({where:{id:employee.id},data:{active:true}});
   revalidatePath("/manager");
   revalidatePath(`/manager/employees/${employee.id}`);
+}
+
+export async function deleteEmployee(employeeId:string){
+  await requireRole([Role.MANAGER,Role.ADMIN]);
+  const employee=await prisma.user.findFirst({where:{id:employeeId,role:Role.EMPLOYEE,active:false}});
+  if(!employee)return;
+  await prisma.$transaction(async tx=>{
+    await tx.auditEvent.deleteMany({where:{actorId:employee.id}});
+    await tx.timesheet.deleteMany({where:{userId:employee.id}});
+    await tx.session.deleteMany({where:{userId:employee.id}});
+    await tx.user.delete({where:{id:employee.id}});
+  });
+  revalidatePath("/manager");
 }

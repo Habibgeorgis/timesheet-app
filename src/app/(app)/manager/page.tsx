@@ -2,7 +2,7 @@ import { Archive, CalendarDays, ChevronRight, Clock3, Mail } from "lucide-react"
 import Link from "next/link";
 import { Prisma, Role } from "@prisma/client";
 import { AddEmployeeForm } from "@/components/add-employee-form";
-import { RemoveEmployeeButton, RestoreEmployeeButton } from "@/components/remove-employee-button";
+import { DeleteEmployeeButton, RemoveEmployeeButton, RestoreEmployeeButton } from "@/components/remove-employee-button";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDuration, initials } from "@/lib/utils";
@@ -46,7 +46,7 @@ function EmployeeCard({employee,archived=false}:{employee:EmployeeProfile;archiv
       <p className="mt-1 flex items-center gap-2 truncate text-xs text-[#66736f]"><Mail className="shrink-0" size={14}/>{employee.email}</p>
       <div className="mt-4 grid grid-cols-2 gap-3 border-y border-[#e5eae8] py-3"><div><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#66736f]"><Clock3 size={13}/>Total hours</div><div className="mt-1 text-sm font-bold">{formatDuration(total)}</div></div><div><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#66736f]"><CalendarDays size={13}/>Weeks</div><div className="mt-1 text-sm font-bold">{weeks}</div></div></div>
     </Link>
-    <div className="mt-3">{archived?<RestoreEmployeeButton employeeId={employee.id} name={employee.name}/>:<RemoveEmployeeButton employeeId={employee.id} name={employee.name}/>}</div>
+    <div className={`mt-3 ${archived?"grid grid-cols-[.8fr_1.2fr] gap-2":""}`}>{archived?<><RestoreEmployeeButton employeeId={employee.id} name={employee.name}/><DeleteEmployeeButton employeeId={employee.id} name={employee.name}/></>:<RemoveEmployeeButton employeeId={employee.id} name={employee.name}/>}</div>
   </article>;
 }
 

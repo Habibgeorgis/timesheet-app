@@ -2,20 +2,24 @@ import { CalendarDays, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { openWeek } from "@/actions/timesheets";
+import { ensureTimesheet, openWeek } from "@/actions/timesheets";
+import { WeeklyPdfMenu } from "@/components/weekly-pdf-menu";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatDuration } from "@/lib/utils";
-import { weekInputValue, weekLabel } from "@/lib/dates";
+import { mondayOf, weekInputValue, weekLabel } from "@/lib/dates";
 export const metadata={title:"My tracking"};
 export default async function TimesheetsPage() {
   const user=await requireUser();
   if(user.role===Role.MANAGER||user.role===Role.ADMIN)redirect("/manager");
+  const currentWeek=mondayOf(new Date());
+  const current=await ensureTimesheet(currentWeek,user.id);
   const rows=await prisma.timesheet.findMany({where:{userId:user.id},include:{entries:true},orderBy:{weekStart:"desc"}});
   const totalMinutes=rows.flatMap((row)=>row.entries).reduce((sum,entry)=>sum+entry.minutes,0);
+  const previousWeeks=rows.filter(row=>row.weekStart<currentWeek&&row.entries.length).map(row=>({id:row.id,value:weekInputValue(row.weekStart),label:weekLabel(row.weekStart)}));
 
   return <>
-    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-bold">My tracking</h1><p className="mt-2 text-[#66736f]">Record and review hours by work week.</p></div><form action={openWeek} className="flex flex-wrap items-end gap-2"><div><label className="label" htmlFor="week">Select week</label><input className="input" id="week" name="week" type="week" defaultValue={weekInputValue(new Date())} required/></div><button className="btn btn-primary">Open week</button></form></div>
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-bold">My tracking</h1><p className="mt-2 text-[#66736f]">Record and review hours by work week.</p></div><div className="flex flex-wrap items-end gap-2"><form action={openWeek} className="flex flex-wrap items-end gap-2"><div><label className="label" htmlFor="week">Select week</label><input className="input" id="week" name="week" type="week" defaultValue={weekInputValue(new Date())} required/></div><button className="btn btn-primary">Open week</button></form><WeeklyPdfMenu currentTimesheetId={current.id} previousWeeks={previousWeeks}/></div></div>
     <div className="mb-6 grid gap-4 sm:grid-cols-3">
       <Metric label="Total tracked" value={formatDuration(totalMinutes)}/>
       <Metric label="Tracked weeks" value={String(rows.length)}/>
