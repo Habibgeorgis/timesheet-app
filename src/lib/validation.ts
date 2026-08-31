@@ -1,8 +1,24 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  email: z.email().transform((value) => value.toLowerCase().trim()),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(128),
+});
+
+export const signupSchema = z.object({
+  name: z.string().trim().min(2, "Enter your full name").max(80),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  password: z.string()
+    .min(12, "Use at least 12 characters")
+    .max(128)
+    .regex(/[a-z]/, "Add a lowercase letter")
+    .regex(/[A-Z]/, "Add an uppercase letter")
+    .regex(/[0-9]/, "Add a number"),
+  passwordConfirmation: z.string(),
+  role: z.enum(["EMPLOYEE", "MANAGER"]),
+}).refine((value) => value.password === value.passwordConfirmation, {
+  message: "Passwords do not match",
+  path: ["passwordConfirmation"],
 });
 
 export const entrySchema = z.object({
@@ -23,4 +39,3 @@ export const reviewSchema = z.object({
   message: "A note is required when rejecting a timesheet",
   path: ["note"],
 });
-
