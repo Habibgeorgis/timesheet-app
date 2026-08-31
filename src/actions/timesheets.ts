@@ -1,10 +1,10 @@
 "use server";
 
-import { AuditAction, TimesheetStatus } from "@prisma/client";
+import { AuditAction, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { isDateInWeek } from "@/lib/dates";
+import { isDateInWeek, weekFromInput } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { entrySchema } from "@/lib/validation";
 
@@ -12,12 +12,12 @@ export type ActionState = { error?: string; success?: string };
 
 export async function saveEntry(_: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
+  if (user.role === Role.MANAGER || user.role === Role.ADMIN) return { error: "Time tracking is available to employees only." };
   const result = entrySchema.safeParse(Object.fromEntries(formData));
   if (!result.success) return { error: result.error.issues[0]?.message ?? "Invalid entry." };
   const { timesheetId, entryId, date, hours } = result.data;
   const timesheet = await prisma.timesheet.findFirst({ where: { id: timesheetId, userId: user.id } });
   if (!timesheet) return { error: "Timesheet not found." };
-  if (timesheet.status !== TimesheetStatus.DRAFT && timesheet.status !== TimesheetStatus.REJECTED) return { error: "This timesheet is locked." };
   const entryDate = new Date(`${date}T12:00:00Z`);
   if (!isDateInWeek(entryDate, timesheet.weekStart)) return { error: "Entry date must be inside this week." };
   const minutes = Math.round(hours * 60);
@@ -41,7 +41,6 @@ export async function saveEntry(_: ActionState, formData: FormData): Promise<Act
       await tx.timeEntry.create({ data: { timesheetId, projectId: generalProject.id, date: entryDate, minutes, billable: true } });
     }
     await tx.auditEvent.create({ data: { timesheetId, actorId: user.id, action: entryId ? AuditAction.UPDATED : AuditAction.CREATED, details: `${entryId ? "Updated" : "Added"} ${minutes} minutes` } });
-    if (timesheet.status === TimesheetStatus.REJECTED) await tx.timesheet.update({ where: { id: timesheetId }, data: { status: TimesheetStatus.DRAFT } });
   });
   revalidatePath(`/timesheets/${timesheetId}`);
   revalidatePath("/dashboard");
@@ -50,25 +49,21 @@ export async function saveEntry(_: ActionState, formData: FormData): Promise<Act
 
 export async function deleteEntry(formData: FormData) {
   const user = await requireUser();
+  if (user.role === Role.MANAGER || user.role === Role.ADMIN) return;
   const entryId = String(formData.get("entryId") ?? "");
-  const entry = await prisma.timeEntry.findFirst({ where: { id: entryId, timesheet: { userId: user.id, status: { in: [TimesheetStatus.DRAFT, TimesheetStatus.REJECTED] } } } });
+  const entry = await prisma.timeEntry.findFirst({ where: { id: entryId, timesheet: { userId: user.id } } });
   if (!entry) return;
   await prisma.timeEntry.delete({ where: { id: entry.id } });
   revalidatePath(`/timesheets/${entry.timesheetId}`);
 }
 
-export async function submitTimesheet(formData: FormData) {
+export async function openWeek(formData: FormData) {
   const user = await requireUser();
-  const timesheetId = String(formData.get("timesheetId") ?? "");
-  const timesheet = await prisma.timesheet.findFirst({ where: { id: timesheetId, userId: user.id }, include: { entries: true } });
-  if (!timesheet || (timesheet.status !== TimesheetStatus.DRAFT && timesheet.status !== TimesheetStatus.REJECTED)) return;
-  if (timesheet.entries.length === 0) redirect(`/timesheets/${timesheetId}?error=Add+at+least+one+entry+before+submitting`);
-  await prisma.$transaction([
-    prisma.timesheet.update({ where: { id: timesheetId }, data: { status: TimesheetStatus.SUBMITTED, submittedAt: new Date(), reviewedAt: null, reviewedById: null } }),
-    prisma.auditEvent.create({ data: { timesheetId, actorId: user.id, action: AuditAction.SUBMITTED } }),
-  ]);
-  revalidatePath("/dashboard");
-  redirect(`/timesheets/${timesheetId}`);
+  if (user.role === Role.MANAGER || user.role === Role.ADMIN) redirect("/manager");
+  const weekStart = weekFromInput(String(formData.get("week") ?? ""));
+  if (!weekStart) redirect("/timesheets");
+  const timesheet = await ensureTimesheet(weekStart, user.id);
+  redirect(`/timesheets/${timesheet.id}`);
 }
 
 export async function ensureTimesheet(weekStart: Date, userId: string) {

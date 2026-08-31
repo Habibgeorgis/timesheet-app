@@ -1,8 +1,9 @@
-import { addDays, endOfWeek, format, isWithinInterval, parseISO, startOfWeek } from "date-fns";
+import { addDays, endOfDay, format, isValid, isWithinInterval, parse, parseISO, startOfWeek } from "date-fns";
 
 export function mondayOf(value: Date | string) {
   const date = typeof value === "string" ? parseISO(value) : value;
-  return startOfWeek(date, { weekStartsOn: 1 });
+  const monday = startOfWeek(date, { weekStartsOn: 1 });
+  return new Date(Date.UTC(monday.getFullYear(), monday.getMonth(), monday.getDate(), 12));
 }
 
 export function dateKey(date: Date) {
@@ -10,15 +11,26 @@ export function dateKey(date: Date) {
 }
 
 export function weekDays(weekStart: Date) {
-  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+  return Array.from({ length: 5 }, (_, index) => addDays(mondayOf(weekStart), index));
 }
 
 export function weekLabel(weekStart: Date) {
-  const end = endOfWeek(weekStart, { weekStartsOn: 1 });
-  return `${format(weekStart, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+  const start = mondayOf(weekStart);
+  const end = addDays(start, 4);
+  return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
 }
 
 export function isDateInWeek(date: Date, weekStart: Date) {
-  return isWithinInterval(date, { start: mondayOf(weekStart), end: endOfWeek(weekStart, { weekStartsOn: 1 }) });
+  const start = mondayOf(weekStart);
+  return isWithinInterval(date, { start, end: endOfDay(addDays(start, 4)) });
 }
 
+export function weekInputValue(date: Date) {
+  return format(mondayOf(date), "RRRR-'W'II");
+}
+
+export function weekFromInput(value: string) {
+  if (!/^\d{4}-W\d{2}$/.test(value)) return null;
+  const parsed = parse(value, "RRRR-'W'II", new Date());
+  return isValid(parsed) ? mondayOf(parsed) : null;
+}
