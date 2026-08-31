@@ -15,12 +15,11 @@ export async function saveEntry(_: ActionState, formData: FormData): Promise<Act
   if (user.role === Role.MANAGER || user.role === Role.ADMIN) return { error: "Time tracking is available to employees only." };
   const result = entrySchema.safeParse(Object.fromEntries(formData));
   if (!result.success) return { error: result.error.issues[0]?.message ?? "Invalid entry." };
-  const { timesheetId, entryId, date, hours } = result.data;
+  const { timesheetId, entryId, date, duration: minutes } = result.data;
   const timesheet = await prisma.timesheet.findFirst({ where: { id: timesheetId, userId: user.id } });
   if (!timesheet) return { error: "Timesheet not found." };
   const entryDate = new Date(`${date}T12:00:00Z`);
   if (!isDateInWeek(entryDate, timesheet.weekStart)) return { error: "Entry date must be inside this week." };
-  const minutes = Math.round(hours * 60);
   const existingDayMinutes = await prisma.timeEntry.aggregate({
     where: { timesheetId, date: entryDate, ...(entryId ? { id: { not: entryId } } : {}) },
     _sum: { minutes: true },

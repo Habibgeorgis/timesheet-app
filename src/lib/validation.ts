@@ -22,9 +22,18 @@ export const managerEmployeeSchema = z.object({
   password: z.string().min(4, "Use at least 4 characters").max(128),
 });
 
+const durationSchema = z.string()
+  .trim()
+  .regex(/^(?:(?:[01]?\d|2[0-3]):[0-5]\d|24:00)$/, "Enter time as hours:minutes, for example 7:30")
+  .transform((value) => {
+    const [hours, minutes] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  })
+  .refine((minutes) => minutes > 0, "Tracked time must be at least one minute");
+
 export const entrySchema = z.object({
   timesheetId: z.string().min(1),
   entryId: z.string().optional(),
   date: z.iso.date(),
-  hours: z.coerce.number().min(0.25).max(24),
+  duration: durationSchema,
 });

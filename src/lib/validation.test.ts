@@ -30,8 +30,15 @@ describe("managerEmployeeSchema",()=>{
 });
 
 describe("entrySchema",()=>{
-  it("accepts time with only a date and hours",()=>{
-    const result=entrySchema.parse({timesheetId:"sheet-1",date:"2026-08-31",hours:"7.5"});
-    expect(result.hours).toBe(7.5);
+  it("converts an hours-and-minutes duration into minutes",()=>{
+    const result=entrySchema.parse({timesheetId:"sheet-1",date:"2026-08-31",duration:"7:30"});
+    expect(result.duration).toBe(450);
+  });
+
+  it("accepts exact minute values and rejects invalid durations",()=>{
+    expect(entrySchema.parse({timesheetId:"sheet-1",date:"2026-08-31",duration:"0:01"}).duration).toBe(1);
+    expect(entrySchema.parse({timesheetId:"sheet-1",date:"2026-08-31",duration:"24:00"}).duration).toBe(1440);
+    expect(entrySchema.safeParse({timesheetId:"sheet-1",date:"2026-08-31",duration:"7:75"}).success).toBe(false);
+    expect(entrySchema.safeParse({timesheetId:"sheet-1",date:"2026-08-31",duration:"0:00"}).success).toBe(false);
   });
 });
