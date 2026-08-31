@@ -54,3 +54,13 @@ export async function deactivateEmployee(formData:FormData){
   ]);
   revalidatePath("/manager");
 }
+
+export async function restoreEmployee(formData:FormData){
+  await requireRole([Role.MANAGER,Role.ADMIN]);
+  const employeeId=String(formData.get("employeeId")??"");
+  const employee=await prisma.user.findFirst({where:{id:employeeId,role:Role.EMPLOYEE,active:false}});
+  if(!employee)return;
+  await prisma.user.update({where:{id:employee.id},data:{active:true}});
+  revalidatePath("/manager");
+  revalidatePath(`/manager/employees/${employee.id}`);
+}
