@@ -8,6 +8,12 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema, signupSchema } from "@/lib/validation";
 
 export type AuthState = { error?: string };
+export type SignupField = "name" | "email" | "password" | "passwordConfirmation" | "role";
+export type SignupState = {
+  error?: string;
+  fieldErrors?: Partial<Record<SignupField,string>>;
+  values?: { name:string;email:string;role:"EMPLOYEE"|"MANAGER" };
+};
 
 export async function login(_: AuthState, formData: FormData): Promise<AuthState> {
   const result = loginSchema.safeParse(Object.fromEntries(formData));
@@ -20,9 +26,15 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   redirect("/dashboard");
 }
 
-export async function signup(_: AuthState, formData: FormData): Promise<AuthState> {
-  const result = signupSchema.safeParse(Object.fromEntries(formData));
-  if (!result.success) return { error: result.error.issues[0]?.message ?? "Check your registration details." };
+export async function signup(_: SignupState, formData: FormData): Promise<SignupState> {
+  const raw=Object.fromEntries(formData);
+  const values={name:String(raw.name??""),email:String(raw.email??""),role:raw.role==="MANAGER"?"MANAGER" as const:"EMPLOYEE" as const};
+  const result = signupSchema.safeParse(raw);
+  if (!result.success) {
+    const fieldErrors:SignupState["fieldErrors"]={};
+    for(const issue of result.error.issues){const field=issue.path[0] as SignupField|undefined;if(field&&!fieldErrors[field])fieldErrors[field]=issue.message}
+    return {fieldErrors,values};
+  }
 
   const { name, email, password, role } = result.data;
   let user;
@@ -32,9 +44,9 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { error: "An account with this email already exists." };
+      return { fieldErrors:{email:"This email is already registered"},values };
     }
-    return { error: "We could not create your account. Please try again." };
+    return { error: "We could not create your account. Please try again.",values };
   }
   await createSession(user.id);
   redirect("/dashboard");

@@ -1,32 +1,37 @@
-import { CalendarDays, Clock3, Download, Users } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, Mail } from "lucide-react";
 import Link from "next/link";
 import { Role } from "@prisma/client";
-import { subWeeks } from "date-fns";
+import { AddEmployeeForm } from "@/components/add-employee-form";
+import { RemoveEmployeeButton } from "@/components/remove-employee-button";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatDuration } from "@/lib/utils";
-import { mondayOf, weekLabel } from "@/lib/dates";
+import { formatDuration, initials } from "@/lib/utils";
 
-export const metadata={title:"Team hours"};
+export const metadata={title:"Employees"};
 
 export default async function ManagerPage(){
   await requireRole([Role.MANAGER,Role.ADMIN]);
-  const since=subWeeks(mondayOf(new Date()),11);
-  const [rows,employees]=await Promise.all([
-    prisma.timesheet.findMany({where:{user:{role:"EMPLOYEE",active:true},weekStart:{gte:since},entries:{some:{}}},include:{user:true,entries:true},orderBy:[{weekStart:"desc"},{user:{name:"asc"}}]}),
-    prisma.user.count({where:{role:"EMPLOYEE",active:true}}),
-  ]);
-  const total=rows.flatMap(row=>row.entries).reduce((sum,entry)=>sum+entry.minutes,0);
-  const trackedEmployees=new Set(rows.filter(row=>row.entries.length).map(row=>row.userId)).size;
+  const employees=await prisma.user.findMany({
+    where:{role:Role.EMPLOYEE,active:true},
+    include:{timesheets:{include:{entries:true},orderBy:{weekStart:"desc"}}},
+    orderBy:{name:"asc"},
+  });
 
   return <>
-    <div className="mb-7"><h1 className="text-3xl font-bold">Team hours</h1><p className="mt-2 text-[#66736f]">Employee hours by Monday–Friday work week.</p></div>
-    <div className="mb-6 grid gap-4 sm:grid-cols-3"><Metric icon={Clock3} label="Total hours" value={formatDuration(total)}/><Metric icon={Users} label="Active employees" value={String(employees)}/><Metric icon={CalendarDays} label="Employees tracking" value={String(trackedEmployees)}/></div>
-    <div className="panel overflow-hidden">
-      <div className="grid grid-cols-[1fr_auto] gap-4 border-b bg-[#f8faf9] px-5 py-3 text-xs font-bold uppercase text-[#65736f] md:grid-cols-[1fr_1fr_.5fr_112px]"><span>Employee</span><span className="desktop-only">Week</span><span className="desktop-only">Hours</span><span>Weekly PDF</span></div>
-      {rows.length?rows.map(row=>{const minutes=row.entries.reduce((sum,entry)=>sum+entry.minutes,0);return <div key={row.id} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b px-5 py-4 last:border-0 md:grid-cols-[1fr_1fr_.5fr_112px]"><Link href={`/manager/timesheets/${row.id}`} className="min-w-0"><span className="block truncate font-bold">{row.user.name}</span><span className="mt-1 block text-xs text-[#66736f] md:hidden">{weekLabel(row.weekStart)} · {formatDuration(minutes)}</span></Link><Link href={`/manager/timesheets/${row.id}`} className="desktop-only text-sm font-semibold">{weekLabel(row.weekStart)}</Link><span className="desktop-only text-sm font-bold">{formatDuration(minutes)}</span><a className="btn btn-secondary min-w-[92px]" href={`/api/reports/timesheets/${row.id}`} aria-label={`Download ${row.user.name}'s report for ${weekLabel(row.weekStart)}`}><Download size={17}/>PDF</a></div>}):<div className="p-12 text-center text-[#66736f]">No employee hours have been tracked yet.</div>}
-    </div>
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-bold">Employees</h1><p className="mt-2 text-[#66736f]">Select an employee to review all weekly and daily hours.</p></div><AddEmployeeForm/></div>
+    {employees.length?<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{employees.map(employee=>{
+      const entries=employee.timesheets.flatMap(timesheet=>timesheet.entries);
+      const total=entries.reduce((sum,entry)=>sum+entry.minutes,0);
+      const weeks=employee.timesheets.filter(timesheet=>timesheet.entries.length).length;
+      return <article key={employee.id} className="panel flex min-h-[250px] flex-col p-5">
+        <Link href={`/manager/employees/${employee.id}`} className="group flex-1">
+          <div className="flex items-start justify-between gap-3"><span className="grid size-12 place-items-center rounded-full bg-[#d8efe9] text-sm font-bold text-[#075f51]">{initials(employee.name)}</span><ChevronRight className="text-[#87938f] transition-transform group-hover:translate-x-1" size={20}/></div>
+          <h2 className="mt-4 text-lg font-bold">{employee.name}</h2>
+          <p className="mt-1 flex items-center gap-2 truncate text-sm text-[#66736f]"><Mail size={15}/>{employee.email}</p>
+          <div className="mt-5 grid grid-cols-2 gap-4 border-y border-[#e5eae8] py-4"><div><div className="flex items-center gap-1.5 text-xs font-semibold text-[#66736f]"><Clock3 size={14}/>Total hours</div><div className="mt-1 font-bold">{formatDuration(total)}</div></div><div><div className="flex items-center gap-1.5 text-xs font-semibold text-[#66736f]"><CalendarDays size={14}/>Tracked weeks</div><div className="mt-1 font-bold">{weeks}</div></div></div>
+        </Link>
+        <div className="mt-4"><RemoveEmployeeButton employeeId={employee.id} name={employee.name}/></div>
+      </article>;
+    })}</div>:<div className="panel p-12 text-center"><h2 className="font-bold">No employees yet</h2><p className="mt-1 text-sm text-[#66736f]">Add an employee to begin collecting tracked hours.</p></div>}
   </>;
 }
-
-function Metric({icon:Icon,label,value}:{icon:typeof Clock3;label:string;value:string}){return <div className="panel flex items-center gap-4 p-5"><span className="grid size-10 place-items-center rounded-md bg-[#e8f4f1] text-[#087f6b]"><Icon size={19}/></span><div><div className="text-2xl font-bold">{value}</div><div className="text-xs font-semibold text-[#66736f]">{label}</div></div></div>}
