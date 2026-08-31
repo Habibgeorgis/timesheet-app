@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, Download } from "lucide-react";
+import { CalendarDays, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
@@ -15,21 +15,20 @@ export default async function TimesheetsPage() {
   const totalMinutes=rows.flatMap((row)=>row.entries).reduce((sum,entry)=>sum+entry.minutes,0);
 
   return <>
-    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-bold">My tracking</h1><p className="mt-2 text-[#66736f]">Record hours by work week and download weekly reports.</p></div><form action={openWeek} className="flex flex-wrap items-end gap-2"><div><label className="label" htmlFor="week">Select week</label><input className="input" id="week" name="week" type="week" defaultValue={weekInputValue(new Date())} required/></div><button className="btn btn-primary">Open week</button></form></div>
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-bold">My tracking</h1><p className="mt-2 text-[#66736f]">Record and review hours by work week.</p></div><form action={openWeek} className="flex flex-wrap items-end gap-2"><div><label className="label" htmlFor="week">Select week</label><input className="input" id="week" name="week" type="week" defaultValue={weekInputValue(new Date())} required/></div><button className="btn btn-primary">Open week</button></form></div>
     <div className="mb-6 grid gap-4 sm:grid-cols-3">
       <Metric label="Total tracked" value={formatDuration(totalMinutes)}/>
       <Metric label="Tracked weeks" value={String(rows.length)}/>
       <Metric label="Average per week" value={formatDuration(rows.length?Math.round(totalMinutes/rows.length):0)}/>
     </div>
     <div className="panel overflow-hidden">
-      <div className="grid grid-cols-[1fr_auto] gap-4 border-b bg-[#f8faf9] px-5 py-3 text-xs font-bold uppercase text-[#65736f] md:grid-cols-[1.4fr_.6fr_112px]"><span>Week</span><span className="desktop-only">Hours</span><span>Weekly PDF</span></div>
+      <div className="grid grid-cols-[1fr_auto] gap-4 border-b bg-[#f8faf9] px-5 py-3 text-xs font-bold uppercase text-[#65736f] md:grid-cols-[1.4fr_.6fr]"><span>Week</span><span>Hours</span></div>
       {rows.length?rows.map((row)=>{
         const minutes=row.entries.reduce((sum,entry)=>sum+entry.minutes,0);
-        return <div key={row.id} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b px-5 py-4 last:border-0 hover:bg-[#fafbfa] md:grid-cols-[1.4fr_.6fr_112px]">
-          <Link href={`/timesheets/${row.id}`} className="flex min-w-0 items-center gap-3 font-semibold"><CalendarDays size={18} className="shrink-0 text-[#72807c]"/><span><span className="block">{weekLabel(row.weekStart)}</span><span className="mt-1 block text-xs font-normal text-[#66736f] md:hidden">{formatDuration(minutes)}</span></span><ChevronRight className="desktop-only ml-auto text-[#87938f]" size={18}/></Link>
-          <span className="desktop-only text-sm font-bold">{formatDuration(minutes)}</span>
-          <a className="btn btn-secondary min-w-[92px]" href={`/api/reports/timesheets/${row.id}`} aria-label={`Download PDF for ${weekLabel(row.weekStart)}`}><Download size={17}/>PDF</a>
-        </div>;
+        return <Link href={`/timesheets/${row.id}`} key={row.id} className="grid grid-cols-[1fr_auto] items-center gap-4 border-b px-5 py-4 last:border-0 hover:bg-[#fafbfa] md:grid-cols-[1.4fr_.6fr]">
+          <span className="flex min-w-0 items-center gap-3 font-semibold"><CalendarDays size={18} className="shrink-0 text-[#72807c]"/><span><span className="block">{weekLabel(row.weekStart)}</span><span className="mt-1 block text-xs font-normal text-[#66736f] md:hidden">{formatDuration(minutes)}</span></span><ChevronRight className="desktop-only ml-auto text-[#87938f]" size={18}/></span>
+          <span className="text-sm font-bold">{formatDuration(minutes)}</span>
+        </Link>;
       }):<div className="p-10 text-center text-[#66736f]">No timesheets yet.</div>}
     </div>
   </>;

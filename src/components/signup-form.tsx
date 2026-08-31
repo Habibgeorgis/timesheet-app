@@ -1,18 +1,43 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, BriefcaseBusiness, LoaderCircle, LockKeyhole, Mail, UserRound, Users } from "lucide-react";
-import { signup, type SignupField } from "@/actions/auth";
 import { cn } from "@/lib/utils";
 
-export function SignupForm(){
-  const [state,action,pending]=useActionState(signup,{});
-  const [values,setValues]=useState({name:"",email:"",password:"",passwordConfirmation:"",role:"EMPLOYEE"});
-  const error=(field:SignupField)=>state.fieldErrors?.[field];
-  const update=(field:keyof typeof values)=>(event:React.ChangeEvent<HTMLInputElement>)=>setValues(current=>({...current,[field]:event.target.value}));
+type SignupField="name"|"email"|"password"|"passwordConfirmation"|"role";
+type Feedback={error?:string;fieldErrors?:Partial<Record<SignupField,string>>};
 
-  return <form action={action} className="space-y-5" noValidate>
-    {state.error&&<div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</div>}
+export function SignupForm(){
+  const router=useRouter();
+  const [values,setValues]=useState({name:"",email:"",password:"",passwordConfirmation:"",role:"EMPLOYEE"});
+  const [feedback,setFeedback]=useState<Feedback>({});
+  const [pending,setPending]=useState(false);
+  const error=(field:SignupField)=>feedback.fieldErrors?.[field];
+  const update=(field:keyof typeof values)=>(event:React.ChangeEvent<HTMLInputElement>)=>{
+    setValues(current=>({...current,[field]:event.target.value}));
+    setFeedback(current=>({...current,error:undefined,fieldErrors:{...current.fieldErrors,[field]:undefined}}));
+  };
+
+  async function submit(event:React.FormEvent<HTMLFormElement>){
+    event.preventDefault();
+    setPending(true);
+    setFeedback({});
+    try{
+      const response=await fetch("/api/auth/signup",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(values)});
+      const result=await response.json() as Feedback&{ok?:boolean};
+      if(!response.ok){setFeedback(result);return}
+      router.replace("/dashboard");
+      router.refresh();
+    }catch{
+      setFeedback({error:"Registration could not be completed. Check your connection and try again."});
+    }finally{
+      setPending(false);
+    }
+  }
+
+  return <form onSubmit={submit} className="space-y-5" noValidate>
+    {feedback.error&&<div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{feedback.error}</div>}
     <div><label className="label" htmlFor="name">Full name</label><div className="relative"><UserRound className="absolute left-3 top-3 text-[#7d8a86]" size={18}/><input className={cn("input pl-10",error("name")&&"input-error")} id="name" name="name" autoComplete="name" placeholder="Your full name" value={values.name} onChange={update("name")} aria-invalid={Boolean(error("name"))} aria-describedby={error("name")?"name-error":undefined}/></div><FieldError id="name-error" message={error("name")}/></div>
     <div><label className="label" htmlFor="email">Work email</label><div className="relative"><Mail className="absolute left-3 top-3 text-[#7d8a86]" size={18}/><input className={cn("input pl-10",error("email")&&"input-error")} id="email" name="email" type="email" autoComplete="email" placeholder="you@company.com" value={values.email} onChange={update("email")} aria-invalid={Boolean(error("email"))} aria-describedby={error("email")?"email-error":undefined}/></div><FieldError id="email-error" message={error("email")}/></div>
     <fieldset><legend className="label">Account role</legend><div className={cn("grid grid-cols-2 gap-2 rounded-md",error("role")&&"ring-1 ring-red-400")}>
