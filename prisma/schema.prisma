@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  MANAGER
+  ADMIN
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum AuditAction {
+  CREATED
+  UPDATED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REOPENED
+}
+
+model User {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         Role        @default(EMPLOYEE)
+  department   String?
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  timesheets   Timesheet[] @relation("OwnerTimesheets")
+  reviewed     Timesheet[] @relation("ReviewerTimesheets")
+  sessions     Session[]
+  auditEvents  AuditEvent[]
+
+  @@index([role, active])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Project {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  client      String?
+  color       String      @default("#0F766E")
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  timeEntries TimeEntry[]
+
+  @@index([active])
+}
+
+model Timesheet {
+  id             String          @id @default(cuid())
+  userId         String
+  weekStart      DateTime        @db.Date
+  status         TimesheetStatus @default(DRAFT)
+  submittedAt    DateTime?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewNote     String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  user           User            @relation("OwnerTimesheets", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy     User?           @relation("ReviewerTimesheets", fields: [reviewedById], references: [id], onDelete: SetNull)
+  entries        TimeEntry[]
+  auditEvents    AuditEvent[]
+
+  @@unique([userId, weekStart])
+  @@index([status, weekStart])
+  @@index([reviewedById])
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  timesheetId String
+  projectId   String
+  date        DateTime  @db.Date
+  minutes     Int
+  description String?
+  billable    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  timesheet   Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Restrict)
+
+  @@index([timesheetId, date])
+  @@index([projectId, date])
+}
+
+model AuditEvent {
+  id          String      @id @default(cuid())
+  timesheetId String
+  actorId     String
+  action      AuditAction
+  details     String?
+  createdAt   DateTime    @default(now())
+  timesheet   Timesheet   @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  actor       User        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([timesheetId, createdAt])
+  @@index([actorId])
+}

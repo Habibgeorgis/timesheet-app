@@ -1,0 +1,9 @@
+import { Role } from "@prisma/client";
+import { subWeeks,startOfWeek } from "date-fns";
+import { HoursChart } from "@/components/hours-chart";
+import { requireRole } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { formatDuration } from "@/lib/utils";
+export const metadata={title:"Team reports"};
+export default async function TeamReportsPage(){await requireRole([Role.MANAGER,Role.ADMIN]);const since=subWeeks(startOfWeek(new Date(),{weekStartsOn:1}),7);const rows=await prisma.timesheet.findMany({where:{weekStart:{gte:since}},include:{user:true,entries:true}});const byUser=new Map<string,{name:string;minutes:number}>();for(const row of rows){const current=byUser.get(row.userId)??{name:row.user.name,minutes:0};current.minutes+=row.entries.reduce((s,e)=>s+e.minutes,0);byUser.set(row.userId,current)}const chart=[...byUser.values()].map(x=>({name:x.name.split(" ")[0],hours:Number((x.minutes/60).toFixed(1))}));const total=[...byUser.values()].reduce((s,x)=>s+x.minutes,0);const billable=rows.flatMap(r=>r.entries).filter(e=>e.billable).reduce((s,e)=>s+e.minutes,0);return <><div className="mb-7"><h1 className="text-3xl font-bold">Team reports</h1><p className="mt-2 text-[#66736f]">Eight-week workload and billable utilization.</p></div><div className="mb-6 grid gap-4 sm:grid-cols-3"><Metric label="Total tracked" value={formatDuration(total)}/><Metric label="Billable hours" value={formatDuration(billable)}/><Metric label="Billable rate" value={`${total?Math.round(billable/total*100):0}%`}/></div><div className="panel p-5"><h2 className="font-bold">Hours by employee</h2><p className="mb-5 mt-1 text-sm text-[#66736f]">Cumulative hours over the reporting period</p><HoursChart data={chart}/></div></>}
+function Metric({label,value}:{label:string;value:string}){return <div className="panel p-5"><div className="text-sm font-semibold text-[#66736f]">{label}</div><div className="mt-2 text-2xl font-bold">{value}</div></div>}

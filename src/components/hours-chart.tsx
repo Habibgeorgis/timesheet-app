@@ -1,0 +1,3 @@
+"use client";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+export function HoursChart({data}:{data:{name:string;hours:number}[]}) { return <div className="h-[220px] w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={data} margin={{top:8,right:8,left:-22,bottom:0}}><CartesianGrid stroke="#e5ebe8" vertical={false}/><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:"#66736f",fontSize:12}}/><YAxis axisLine={false} tickLine={false} tick={{fill:"#66736f",fontSize:12}}/><Tooltip cursor={{fill:"#f1f5f3"}} contentStyle={{border:"1px solid #dce3e0",borderRadius:6}}/><Bar dataKey="hours" fill="#087f6b" radius={[4,4,0,0]} maxBarSize={36}/></BarChart></ResponsiveContainer></div>; }
