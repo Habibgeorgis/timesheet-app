@@ -5,7 +5,14 @@ import { addDays, addMonths, eachDayOfInterval, endOfMonth, format, isAfter, isB
 import { CalendarDays, ChevronLeft, ChevronRight, Download, FileText } from "lucide-react";
 import { dateKey, mondayOf } from "@/lib/dates";
 
-export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart }: { currentTimesheetId: string; currentWeekStart: string }) {
+type WeeklyPdfMenuProps = {
+  currentWeekStart: string;
+  currentTimesheetId?: string;
+  employeeId?: string;
+  employeeName?: string;
+};
+
+export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart, employeeId, employeeName }: WeeklyPdfMenuProps) {
   const currentMonday = mondayOf(currentWeekStart);
   const latestPreviousMonday = addDays(currentMonday, -7);
   const [open, setOpen] = useState(false);
@@ -35,6 +42,12 @@ export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart }: { curren
   const selectedFriday = addDays(selectedMonday, 4);
   const selectedLabel = `${format(selectedMonday, "MMM d")} - ${format(selectedFriday, "MMM d, yyyy")}`;
   const canMoveForward = isBefore(endOfMonth(visibleMonth), startOfMonth(currentMonday));
+  const reportHref = (weekStart: Date) => {
+    const params = new URLSearchParams({ week: dateKey(weekStart) });
+    if (employeeId) params.set("employeeId", employeeId);
+    return `/api/reports/weekly?${params.toString()}`;
+  };
+  const currentReportHref = employeeId ? reportHref(currentMonday) : `/api/reports/timesheets/${currentTimesheetId}`;
 
   function chooseWeek(day: Date) {
     const monday = mondayOf(day);
@@ -49,8 +62,8 @@ export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart }: { curren
       </button>
       {open && (
         <div className="panel absolute right-0 z-20 mt-2 w-[min(380px,calc(100vw-32px))] p-5 shadow-xl" role="dialog" aria-label="Download weekly tracking">
-          <h2 className="font-bold">Download weekly tracking</h2>
-          <a className="btn btn-primary mt-4 w-full" href={`/api/reports/timesheets/${currentTimesheetId}`} onClick={() => setOpen(false)}>
+          <h2 className="font-bold">{employeeName ? `${employeeName}'s weekly tracking` : "Download weekly tracking"}</h2>
+          <a className="btn btn-primary mt-4 w-full" href={currentReportHref} onClick={() => setOpen(false)}>
             <Download size={17} />Download this week&apos;s tracking
           </a>
           <div className="my-5 border-t border-[#dce3e0]" />
@@ -95,7 +108,7 @@ export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart }: { curren
             <span className="text-[#66736f]">Selected work week</span>
             <strong className="mt-1 block">{selectedLabel}</strong>
           </div>
-          <a className="btn btn-secondary mt-3 w-full" href={`/api/reports/weekly?week=${dateKey(selectedMonday)}`} onClick={() => setOpen(false)}>
+          <a className="btn btn-secondary mt-3 w-full" href={reportHref(selectedMonday)} onClick={() => setOpen(false)}>
             <Download size={17} />Download selected week
           </a>
         </div>
