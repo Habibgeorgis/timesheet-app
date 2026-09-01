@@ -5,12 +5,12 @@ import { LoaderCircle, Plus, UserPlus } from "lucide-react";
 import { addEmployee } from "@/actions/employees";
 import { cn } from "@/lib/utils";
 
-export function AddEmployeeForm(){
+export function AddEmployeeForm({selectionCard=false}:{selectionCard?:boolean}){
   const [state,action,pending]=useActionState(addEmployee,{});
   const [values,setValues]=useState({name:"",email:"",employeeCode:"",jobTitle:""});
   const update=(field:keyof typeof values)=>(event:React.ChangeEvent<HTMLInputElement>)=>setValues(current=>({...current,[field]:event.target.value}));
   return <details className="relative">
-    <summary className="btn btn-primary list-none"><UserPlus size={18}/>Add employee</summary>
+    <summary className={selectionCard?"flex min-h-36 cursor-pointer list-none flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[#aebbb7] bg-white p-5 text-center font-bold text-[#087f6b] transition hover:border-[#087f6b] hover:bg-[#f5faf8]":"btn btn-primary list-none"}>{selectionCard?<><span className="grid size-11 place-items-center rounded-full bg-[#e8f4f1]"><Plus size={24}/></span><span>Add employee</span></>:<><UserPlus size={18}/>Add employee</>}</summary>
     <form action={action} className="panel absolute right-0 z-20 mt-2 w-[min(380px,calc(100vw-32px))] space-y-4 p-5 shadow-xl" noValidate>
       <div><h2 className="font-bold">Add employee</h2><p className="mt-1 text-sm text-[#66736f]">Add a profile to the employee selector.</p></div>
       {state.error&&<div role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</div>}

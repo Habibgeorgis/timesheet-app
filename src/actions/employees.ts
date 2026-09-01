@@ -36,6 +36,7 @@ export async function addEmployee(_:EmployeeFormState,formData:FormData):Promise
     return {error:"The employee account could not be added. Try again."};
   }
   revalidatePath("/manager");
+  revalidatePath("/employee");
   return {success:existing?"Employee restored.":"Employee added."};
 }
 
