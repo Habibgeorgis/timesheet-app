@@ -8,7 +8,20 @@ import { prisma } from "@/lib/prisma";
 import { formatDuration, initials } from "@/lib/utils";
 import { dateKey, mondayOf, weekDays, weekLabel } from "@/lib/dates";
 
-type EmployeeProfile=Prisma.UserGetPayload<{include:{timesheets:{include:{entries:true}}}}>;
+const employeeSelect={
+  id:true,
+  name:true,
+  email:true,
+  employeeCode:true,
+  jobTitle:true,
+  department:true,
+  active:true,
+  timesheets:{
+    select:{weekStart:true,entries:{select:{date:true,minutes:true}}},
+    orderBy:{weekStart:"desc" as const},
+  },
+} satisfies Prisma.UserSelect;
+type EmployeeProfile=Prisma.UserGetPayload<{select:typeof employeeSelect}>;
 
 export const metadata={title:"Employees"};
 
@@ -21,7 +34,7 @@ export default async function ManagerPage({searchParams}:{searchParams:Promise<{
   const days=weekDays(selectedWeek);
   const employees=await prisma.user.findMany({
     where:{role:Role.EMPLOYEE},
-    include:{timesheets:{include:{entries:true},orderBy:{weekStart:"desc"}}},
+    select:employeeSelect,
     orderBy:{name:"asc"},
   });
   const active=employees.filter(employee=>employee.active);
