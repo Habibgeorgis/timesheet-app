@@ -1,11 +1,12 @@
 "use server";
 
 import { Prisma, Role } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { managerEmployeeSchema } from "@/lib/validation";
 
-type EmployeeField="name"|"email"|"employeeCode"|"jobTitle";
+type EmployeeField="name"|"email";
 export type EmployeeFormState={
   error?:string;
   success?:string;
@@ -20,16 +21,17 @@ export async function addEmployee(_:EmployeeFormState,formData:FormData):Promise
     return {fieldErrors};
   }
 
-  const {name,email,employeeCode,jobTitle}=result.data;
+  const {name,email}=result.data;
   const existing=await prisma.user.findUnique({where:{email}});
   if(existing?.active)return {fieldErrors:{email:"This email already has an active account"}};
   if(existing&&existing.role!==Role.EMPLOYEE)return {fieldErrors:{email:"This email belongs to a manager account"}};
 
   try{
     if(existing){
-      await prisma.user.update({where:{id:existing.id},data:{name,employeeCode,jobTitle,active:true}});
+      await prisma.user.update({where:{id:existing.id},data:{name,active:true}});
     }else{
-      await prisma.user.create({data:{name,email,employeeCode,jobTitle,role:Role.EMPLOYEE}});
+      const employeeCode=`EMP-${randomUUID().replaceAll("-","").slice(0,6).toUpperCase()}`;
+      await prisma.user.create({data:{name,email,employeeCode,role:Role.EMPLOYEE}});
     }
   }catch(error){
     if(error instanceof Prisma.PrismaClientKnownRequestError&&error.code==="P2002")return {error:"Employee ID or email is already in use."};

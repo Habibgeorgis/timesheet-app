@@ -3,8 +3,6 @@ import { z } from "zod";
 export const managerEmployeeSchema = z.object({
   name: z.string().trim().min(2, "Enter the employee name").max(80),
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-  employeeCode: z.string().trim().min(2, "Enter an employee ID").max(30),
-  jobTitle: z.string().trim().min(2, "Enter a job title").max(80),
 });
 
 export const entrySchema = z.object({
