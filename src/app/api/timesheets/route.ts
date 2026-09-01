@@ -1,4 +1,4 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-export async function GET(){const user=await getCurrentUser();if(!user)return NextResponse.json({error:"Unauthorized"},{status:401});const timesheets=await prisma.timesheet.findMany({where:{userId:user.id},include:{entries:true},orderBy:{weekStart:"desc"}});return NextResponse.json({timesheets});}
+import { getSelectedEmployee } from "@/lib/selected-employee";
+export async function GET(){const employee=await getSelectedEmployee();if(!employee)return NextResponse.json({error:"Select an employee"},{status:400});const timesheets=await prisma.timesheet.findMany({where:{userId:employee.id},include:{entries:true},orderBy:{weekStart:"desc"}});return NextResponse.json({timesheets});}

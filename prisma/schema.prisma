@@ -33,7 +33,8 @@ model User {
   id           String      @id @default(cuid())
   name         String
   email        String      @unique
-  passwordHash String
+  employeeCode String?     @unique
+  jobTitle     String?
   role         Role        @default(EMPLOYEE)
   department   String?
   active       Boolean     @default(true)
@@ -41,22 +42,9 @@ model User {
   updatedAt    DateTime    @updatedAt
   timesheets   Timesheet[] @relation("OwnerTimesheets")
   reviewed     Timesheet[] @relation("ReviewerTimesheets")
-  sessions     Session[]
   auditEvents  AuditEvent[]
 
   @@index([role, active])
-}
-
-model Session {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
-  userId    String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
 }
 
 model Project {

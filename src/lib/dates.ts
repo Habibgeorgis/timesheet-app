@@ -11,18 +11,18 @@ export function dateKey(date: Date) {
 }
 
 export function weekDays(weekStart: Date) {
-  return Array.from({ length: 5 }, (_, index) => addDays(mondayOf(weekStart), index));
+  return Array.from({ length: 7 }, (_, index) => addDays(mondayOf(weekStart), index));
 }
 
 export function weekLabel(weekStart: Date) {
   const start = mondayOf(weekStart);
-  const end = addDays(start, 4);
+  const end = addDays(start, 6);
   return `${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
 }
 
 export function isDateInWeek(date: Date, weekStart: Date) {
   const start = mondayOf(weekStart);
-  return isWithinInterval(date, { start, end: endOfDay(addDays(start, 4)) });
+  return isWithinInterval(date, { start, end: endOfDay(addDays(start, 6)) });
 }
 
 export function weekInputValue(date: Date) {

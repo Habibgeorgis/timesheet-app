@@ -1,17 +1,14 @@
 import { CalendarDays, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { Role } from "@prisma/client";
-import { redirect } from "next/navigation";
 import { ensureTimesheet } from "@/actions/timesheets";
 import { WeeklyPdfMenu } from "@/components/weekly-pdf-menu";
-import { requireUser } from "@/lib/auth";
+import { requireSelectedEmployee } from "@/lib/selected-employee";
 import { prisma } from "@/lib/prisma";
 import { formatDuration } from "@/lib/utils";
 import { dateKey, mondayOf, weekLabel } from "@/lib/dates";
 export const metadata={title:"My tracking"};
 export default async function TimesheetsPage() {
-  const user=await requireUser();
-  if(user.role===Role.MANAGER||user.role===Role.ADMIN)redirect("/manager");
+  const user=await requireSelectedEmployee();
   const currentWeek=mondayOf(new Date());
   const current=await ensureTimesheet(currentWeek,user.id);
   const rows=await prisma.timesheet.findMany({where:{userId:user.id},include:{entries:true},orderBy:{weekStart:"desc"}});

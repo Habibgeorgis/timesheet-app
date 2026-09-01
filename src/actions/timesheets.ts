@@ -1,9 +1,9 @@
 "use server";
 
-import { AuditAction, Role } from "@prisma/client";
+import { AuditAction } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { requireSelectedEmployee } from "@/lib/selected-employee";
 import { isDateInWeek, weekFromInput } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { entrySchema } from "@/lib/validation";
@@ -11,8 +11,7 @@ import { entrySchema } from "@/lib/validation";
 export type ActionState = { error?: string; success?: string };
 
 export async function saveEntry(_: ActionState, formData: FormData): Promise<ActionState> {
-  const user = await requireUser();
-  if (user.role === Role.MANAGER || user.role === Role.ADMIN) return { error: "Time tracking is available to employees only." };
+  const user = await requireSelectedEmployee();
   const result = entrySchema.safeParse(Object.fromEntries(formData));
   if (!result.success) return { error: result.error.issues[0]?.message ?? "Invalid entry." };
   const { timesheetId, entryId, date, duration: minutes } = result.data;
@@ -47,8 +46,7 @@ export async function saveEntry(_: ActionState, formData: FormData): Promise<Act
 }
 
 export async function deleteEntry(formData: FormData) {
-  const user = await requireUser();
-  if (user.role === Role.MANAGER || user.role === Role.ADMIN) return;
+  const user = await requireSelectedEmployee();
   const entryId = String(formData.get("entryId") ?? "");
   const entry = await prisma.timeEntry.findFirst({ where: { id: entryId, timesheet: { userId: user.id } } });
   if (!entry) return;
@@ -57,8 +55,7 @@ export async function deleteEntry(formData: FormData) {
 }
 
 export async function openWeek(formData: FormData) {
-  const user = await requireUser();
-  if (user.role === Role.MANAGER || user.role === Role.ADMIN) redirect("/manager");
+  const user = await requireSelectedEmployee();
   const weekStart = weekFromInput(String(formData.get("week") ?? ""));
   if (!weekStart) redirect("/timesheets");
   const timesheet = await ensureTimesheet(weekStart, user.id);

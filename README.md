@@ -1,34 +1,25 @@
 # Time Track
 
-Production-oriented employee time tracking with weekly timesheets, manager approvals, audit history, charts, and PDF reports.
+A direct-access weekly employee time tracker with manager reporting and PDF exports.
 
 ## Stack
 
-- Next.js 16 App Router, React 19, TypeScript, and Tailwind CSS 4
-- PostgreSQL 16 and Prisma ORM
-- Database-backed opaque sessions, bcrypt password hashing, HTTP-only cookies, and role guards
-- Recharts for reporting and React PDF for downloadable weekly records
-- Zod validation and Vitest unit tests
+- Next.js 16, React 19, TypeScript, and Tailwind CSS 4
+- PostgreSQL and Prisma ORM
+- Recharts, React PDF, Zod, and Vitest
 
-## Architecture
+## Application Flow
+
+The home page offers Employee and Manager modes. Employee mode stores the selected employee ID in a convenience cookie so refreshes retain the selection; it is not authentication. Manager mode is intentionally public and opens the team view directly.
 
 ```text
-src/
-  actions/        authenticated mutations and workflow transitions
-  app/            pages, layouts, REST endpoints, and report downloads
-  components/     reusable application and chart components
-  lib/            auth, database, validation, dates, and PDF documents
-prisma/
-  migrations/     checked-in PostgreSQL migration history
-  schema.prisma   relational domain model
-  seed.ts         deterministic development accounts and sample data
+Home -> Employee selection -> Weekly timesheet
+Home -> Manager view -> Team timesheets
 ```
 
-Server components query Prisma directly for page reads. Server actions own validated UI mutations. Route handlers provide integration endpoints and binary PDF responses. Every privileged operation verifies the session and role on the server; UI visibility is not treated as authorization.
+Employee records, weekly timesheets, and daily minutes remain in PostgreSQL. Server actions own validated mutations, while route handlers provide data and weekly PDF downloads.
 
-## Local setup
-
-Requirements: Node.js 20.9+, npm, and Docker.
+## Local Setup
 
 ```bash
 cp .env.example .env
@@ -40,25 +31,18 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Development accounts use `Timesheet123!`:
-
-- `employee@acme.test` - employee workflow
-- `manager@acme.test` - manager approval and team reporting
+Open [http://localhost:3000](http://localhost:3000). No credentials are required.
 
 ## Commands
 
 ```bash
-npm run dev          # development server
-npm run build        # production build
-npm run lint         # static checks
-npm test             # unit tests
-npm run db:migrate   # create/apply development migrations
-npm run db:seed      # load development data
-npm run db:studio    # inspect data with Prisma Studio
+npm run dev
+npm run build
+npm run lint
+npm test
+npm run db:migrate
+npm run db:seed
+npm run db:studio
 ```
 
-## Production notes
-
-Use a managed PostgreSQL database, a unique database role, TLS, and platform-managed secrets. Set `DATABASE_URL`, `APP_URL`, and `SESSION_COOKIE_NAME`; run `prisma migrate deploy` as a release step. The session cookie automatically becomes `Secure` in production. Production seeding requires a strong `SEED_PASSWORD`; the development fallback is never shown in production. Put the application behind HTTPS and add scheduled cleanup for expired `Session` records.
-
-The `/api/health` endpoint verifies database connectivity. `/api/timesheets` exposes the signed-in employee's records, and `/api/reports/timesheets/:id` enforces owner/manager access before returning a PDF.
+For production, configure `DATABASE_URL`, run `prisma migrate deploy`, and deploy behind HTTPS. This intentionally open version provides no access control; real authorization can be added later without changing the time-calculation or persistence layers.

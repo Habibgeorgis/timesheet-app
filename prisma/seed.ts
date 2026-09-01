@@ -1,31 +1,24 @@
 import { PrismaClient, Role, TimesheetStatus, AuditAction } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { addDays, startOfWeek, subWeeks } from "date-fns";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const seedPassword = process.env.SEED_PASSWORD ?? "Timesheet123!";
-  if (process.env.NODE_ENV === "production" && !process.env.SEED_PASSWORD) {
-    throw new Error("SEED_PASSWORD is required when seeding production.");
-  }
-  const passwordHash = await bcrypt.hash(seedPassword, 12);
-
   const [manager, employee, employeeTwo] = await Promise.all([
     prisma.user.upsert({
       where: { email: "manager@acme.test" },
       update: {},
-      create: { name: "Maya Chen", email: "manager@acme.test", passwordHash, role: Role.MANAGER, department: "Operations" },
+      create: { name: "Maya Chen", email: "manager@acme.test", role: Role.MANAGER, department: "Operations" },
     }),
     prisma.user.upsert({
       where: { email: "employee@acme.test" },
-      update: {},
-      create: { name: "Alex Morgan", email: "employee@acme.test", passwordHash, role: Role.EMPLOYEE, department: "Product" },
+      update: { employeeCode: "EMP-001", jobTitle: "Product Specialist" },
+      create: { name: "Alex Morgan", email: "employee@acme.test", employeeCode: "EMP-001", jobTitle: "Product Specialist", role: Role.EMPLOYEE, department: "Product" },
     }),
     prisma.user.upsert({
       where: { email: "jordan@acme.test" },
-      update: {},
-      create: { name: "Jordan Lee", email: "jordan@acme.test", passwordHash, role: Role.EMPLOYEE, department: "Engineering" },
+      update: { employeeCode: "EMP-002", jobTitle: "Software Developer" },
+      create: { name: "Jordan Lee", email: "jordan@acme.test", employeeCode: "EMP-002", jobTitle: "Software Developer", role: Role.EMPLOYEE, department: "Engineering" },
     }),
   ]);
 
@@ -78,7 +71,7 @@ async function main() {
     },
   });
 
-  console.log("Seeded manager@acme.test and employee@acme.test");
+  console.log("Seeded manager and employee records");
 }
 
 main().finally(() => prisma.$disconnect());

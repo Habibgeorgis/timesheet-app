@@ -2,15 +2,12 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 import { parseISO } from "date-fns";
 import { Role } from "@prisma/client";
-import { getCurrentUser } from "@/lib/auth";
 import { dateKey, mondayOf } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
+import { getSelectedEmployee } from "@/lib/selected-employee";
 import { TimesheetPdf } from "@/lib/timesheet-pdf";
 
 export async function GET(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
-
   const params = new URL(request.url).searchParams;
   const value = params.get("week");
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Response("Invalid week", { status: 400 });
@@ -20,14 +17,8 @@ export async function GET(request: Request) {
   if (weekStart > mondayOf(new Date())) return new Response("Future weeks are not available", { status: 400 });
 
   const employeeId = params.get("employeeId");
-  let reportUser = user;
-  if (employeeId && employeeId !== user.id) {
-    const elevated = user.role === Role.MANAGER || user.role === Role.ADMIN;
-    if (!elevated) return new Response("Forbidden", { status: 403 });
-    const employee = await prisma.user.findFirst({ where: { id: employeeId, role: Role.EMPLOYEE } });
-    if (!employee) return new Response("Employee not found", { status: 404 });
-    reportUser = employee;
-  }
+  const reportUser=employeeId?await prisma.user.findFirst({where:{id:employeeId,role:Role.EMPLOYEE}}):await getSelectedEmployee();
+  if(!reportUser)return new Response("Select an employee",{status:400});
 
   const timesheet = await prisma.timesheet.findUnique({
     where: { userId_weekStart: { userId: reportUser.id, weekStart } },

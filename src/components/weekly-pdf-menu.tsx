@@ -39,8 +39,8 @@ export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart, employeeId
   const calendarStart = startOfWeek(startOfMonth(visibleMonth), { weekStartsOn: 1 });
   const calendarEnd = addDays(startOfWeek(endOfMonth(visibleMonth), { weekStartsOn: 1 }), 6);
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  const selectedFriday = addDays(selectedMonday, 4);
-  const selectedLabel = `${format(selectedMonday, "MMM d")} - ${format(selectedFriday, "MMM d, yyyy")}`;
+  const selectedSunday = addDays(selectedMonday, 6);
+  const selectedLabel = `${format(selectedMonday, "MMM d")} - ${format(selectedSunday, "MMM d, yyyy")}`;
   const canMoveForward = isBefore(endOfMonth(visibleMonth), startOfMonth(currentMonday));
   const reportHref = (weekStart: Date) => {
     const params = new URLSearchParams({ week: dateKey(weekStart) });
@@ -86,8 +86,7 @@ export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart, employeeId
               {days.map((day) => {
                 const dayMonday = mondayOf(day);
                 const unavailable = isAfter(dayMonday, latestPreviousMonday);
-                const weekday = day.getDay();
-                const selected = dateKey(dayMonday) === dateKey(selectedMonday) && weekday >= 1 && weekday <= 5;
+                const selected = dateKey(dayMonday) === dateKey(selectedMonday);
                 return (
                   <button
                     type="button"
@@ -95,7 +94,7 @@ export function WeeklyPdfMenu({ currentTimesheetId, currentWeekStart, employeeId
                     disabled={unavailable}
                     onClick={() => chooseWeek(day)}
                     aria-label={`Select week containing ${format(day, "MMMM d, yyyy")}`}
-                    className={`h-9 text-sm transition-colors ${selected ? "bg-[#087f6b] font-bold text-white" : "hover:bg-[#e7f2ef]"} ${!isSameMonth(day, visibleMonth) ? "text-[#a7b0ad]" : ""} ${unavailable ? "cursor-not-allowed opacity-30" : ""} ${selected && isSameDay(day, selectedMonday) ? "rounded-l-md" : ""} ${selected && isSameDay(day, selectedFriday) ? "rounded-r-md" : ""}`}
+                    className={`h-9 text-sm transition-colors ${selected ? "bg-[#087f6b] font-bold text-white" : "hover:bg-[#e7f2ef]"} ${!isSameMonth(day, visibleMonth) ? "text-[#a7b0ad]" : ""} ${unavailable ? "cursor-not-allowed opacity-30" : ""} ${selected && isSameDay(day, selectedMonday) ? "rounded-l-md" : ""} ${selected && isSameDay(day, selectedSunday) ? "rounded-r-md" : ""}`}
                   >
                     {format(day, "d")}
                   </button>
