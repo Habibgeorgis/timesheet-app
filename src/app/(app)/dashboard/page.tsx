@@ -11,7 +11,7 @@ import { mondayOf, weekLabel } from "@/lib/dates";
 export const metadata={title:"Overview"};
 export default async function DashboardPage() {
   const user=await requireSelectedEmployee(); const weekStart=mondayOf(new Date()); const current=await ensureTimesheet(weekStart,user.id);
-  const timesheets=await prisma.timesheet.findMany({where:{userId:user.id,weekStart:{gte:subWeeks(weekStart,7),lte:weekStart}},include:{entries:true},orderBy:{weekStart:"desc"}});
+  const timesheets=await prisma.timesheet.findMany({where:{userId:user.id,weekStart:{gte:subWeeks(weekStart,7),lte:weekStart},entries:{some:{}}},select:{id:true,weekStart:true,entries:{select:{date:true,minutes:true}}},orderBy:{weekStart:"desc"}});
   const currentFull=timesheets.find(t=>t.id===current.id)??{...current,entries:[]}; const currentMinutes=currentFull.entries.reduce((s,e)=>s+e.minutes,0);
   const trackedDays=new Set(timesheets.flatMap(t=>t.entries.map(e=>e.date.toISOString().slice(0,10)))).size; const chart=timesheets.slice().reverse().map(t=>({name:format(t.weekStart,"MMM d"),hours:Number((t.entries.reduce((s,e)=>s+e.minutes,0)/60).toFixed(1))}));
   return <><div className="mb-7 flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-[#087f6b]">{format(new Date(),"EEEE, MMMM d")}</p><h1 className="mt-1 text-3xl font-bold">Good day, {user.name.split(" ")[0]}</h1><p className="mt-2 text-[#66736f]">Here&apos;s where your work week stands.</p></div><Link href={`/timesheets/${current.id}`} className="btn btn-primary"><Clock3 size={18}/>Log time</Link></div>

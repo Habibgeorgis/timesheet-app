@@ -11,7 +11,11 @@ export default async function TimesheetsPage() {
   const user=await requireSelectedEmployee();
   const currentWeek=mondayOf(new Date());
   const current=await ensureTimesheet(currentWeek,user.id);
-  const rows=await prisma.timesheet.findMany({where:{userId:user.id,weekStart:{lte:currentWeek}},include:{entries:true},orderBy:{weekStart:"desc"}});
+  const rows=await prisma.timesheet.findMany({
+    where:{userId:user.id,weekStart:{lte:currentWeek},entries:{some:{}}},
+    select:{id:true,weekStart:true,entries:{select:{minutes:true}}},
+    orderBy:{weekStart:"desc"},
+  });
   const totalMinutes=rows.flatMap((row)=>row.entries).reduce((sum,entry)=>sum+entry.minutes,0);
 
   return <>
